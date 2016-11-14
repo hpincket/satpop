@@ -1,4 +1,3 @@
-import bs4
 import time
 import os
 import random
@@ -17,11 +16,28 @@ with open(C.GAZ_FILE, "r", encoding="utf-8", newline='') as tsvfile:
 
 print(len(gaz_index.keys()))
 
+# Init Error skip list
+error_index = set()
+if os.path.exists(C.SATPOP_ERR_IMAGE_FILE):
+    with open(C.SATPOP_ERR_IMAGE_FILE, "r") as fd:
+       for line in fd.readlines():
+            error_index.add(line.strip())
+
+print("Ignoring: {}".format(len(error_index)))
+
 def get_pop(lat, lon):
-    r = requests.get(C.CENSUS_URL, {"latitude": lat,
-                                    "longitude": lon,
-                                    "show_all": True,
-                                    "format": "json"})
+    try:
+        r = requests.get(C.CENSUS_URL, timeout=2,
+                         params = {"latitude": lat,
+                          "longitude": lon,
+                          "show_all": True,
+                          "format": "json"})
+    except requests.exceptions.Timeout:
+        print("Timeout.")
+        return False
+    except:
+        print("All Hell Broke loose")
+        return False
     res_json = json.loads(r.content.decode('utf-8'))
     if res_json['status'] != "OK":
         print(res_json)
@@ -43,11 +59,19 @@ def get_pop(lat, lon):
 
 
 def get_image(given_uuid, lat, lon):
-    r = requests.get(C.NASA_URL, {"api_key": C.NASA_API_KEY,
-                                  # "date": C.DATE,
-                                  "cloud_score": True,
-                                  "lat": str(lat),
-                                  "lon": str(lon)})
+    fname = os.path.join(C.SATPOP_IMAGE_FOLDER, "{}.{}".format(given_uuid, "png"))
+    if os.path.exists(fname):
+        print(".")
+        return
+    try:
+        r = requests.get(C.NASA_URL, {"api_key": C.NASA_API_KEY,
+                                      # "date": C.DATE,
+                                      "cloud_score": True,
+                                      "lat": str(lat),
+                                      "lon": str(lon)})
+    except ConnectionError:
+        print("Connection Error")
+        return False
 
     if r.status_code == 429:
         print("Rate Limited.")
@@ -62,17 +86,28 @@ def get_image(given_uuid, lat, lon):
         print(given_uuid, lat, lon, r.status_code)
         return False
     res_json = json.loads(r.content.decode('utf-8'))
+    if "error" in res_json:
+        if "429" in res_json['error']:
+            print("Rate Limited.")
+            print(res_json)
+            time.sleep(300)
+        return False
     cloud_score = 1
     try:
         url = res_json["url"]
         cloud_score = res_json["cloud_score"]
     except:
         print(res_json)
+        print(r.status_code)
         print("Error - ({},{})".format(lat, lon))
+        # with open(C.SATPOP_ERR_IMAGE_FILE, "a") as fd:
+            # fd.write("{}\n".format(given_uuid))
     if cloud_score == None or cloud_score > .5:
         return False
     r = requests.get(url)
-    fname = os.path.join(C.SATPOP_IMAGE_FOLDER, "{}.{}".format(given_uuid, "png"))
+    if r.status_code != 200:
+        print(given_uuid, lat, lon, r.status_code)
+        return False
     with open(fname, "+wb") as fd:
         fd.write(r.content)
     return True
@@ -172,6 +207,9 @@ def main():
     with open(main_data_fille, "r", newline='') as tsvfile:
         tsvreader = csv.reader(tsvfile, delimiter='\t', quotechar='|')
         for row in tsvreader:
+            if row[0] in error_index:
+                print(">")
+                continue
             get_image(row[0], row[1], row[2])
 
 if __name__ == "__main__":
