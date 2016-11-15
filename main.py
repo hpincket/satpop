@@ -138,6 +138,22 @@ class GeoNamesData:
     modification date : date of last modification in yyyy-MM-dd format
     """
 
+    def __init__(self, path, cache_path):
+        '''
+        Creates a new GeoNamesData object.
+        :param path:  The path to the geonames file
+        :param cache_path:  The path to save a temporary file
+        '''
+        self.path = path
+        self.cache_path = cache_path
+        self.pos = 0
+        if os.path.exists(cache_path):
+            self._read_data_cache()
+        else:
+            self._gen_new_data()
+            self._write_data_cache()
+        print("Init done")
+
     def _write_data_cache(self):
         with open(self.cache_path, '+w', encoding="utf-8", newline='') as tsvfile:
             tsvwriter = csv.writer(tsvfile, delimiter='\t',
@@ -164,33 +180,26 @@ class GeoNamesData:
         size = min(len(all_data), C.NUM_GEO_CITIES)
         self.data = random.sample(all_data, size)
 
-    def __init__(self, path, cache_path):
-        self.path = path
-        self.cache_path = cache_path
-        self.pos = 0
-        if os.path.exists(cache_path):
-            self._read_data_cache()
-        else:
-            self._gen_new_data()
-            self._write_data_cache()
-        print("Init done")
 
 def image_already_downloaded(given_uuid):
     fname = os.path.join(C.SATPOP_IMAGE_FOLDER, "{}.{}".format(given_uuid, "png"))
     return os.path.exists(fname)
 
+def get_num_of_lines(fname):
+    if os.path.exists(fname):
+        with open(fname, "r", newline='') as fd:
+            return len(fd.readlines())
+    else:
+        return 0
+
+
 def main():
     gnd = GeoNamesData(C.SATPOP_GEONAMES_FILE, C.SATPOP_GEONAMES_CACHE_FILE)
-    main_data_fille = os.path.join(C.SATPOP_DATA_FOLDER, "data.tsv")
+    main_data_file = os.path.join(C.SATPOP_DATA_FOLDER, "data.tsv")
     # Cache -> Data
-    to_skip = 0
-    if os.path.exists(main_data_fille):
-        with open(main_data_fille, "r", newline='') as tsvfile:
-            tsvreader = csv.reader(tsvfile, delimiter='\t', quotechar='|')
-            for i,row in enumerate(tsvreader):
-                to_skip = i+1
+    to_skip = get_num_of_lines(main_data_file)
     print("Will skip {} data rows.".format(to_skip))
-    with open(main_data_fille, "a", newline='') as tsvfile:
+    with open(main_data_file, "a", newline='') as tsvfile:
         tsvwriter = csv.writer(tsvfile, delimiter='\t', quotechar='|')
         for i,data in enumerate(gnd.data):
             if i < to_skip:
@@ -204,7 +213,7 @@ def main():
                 tsvwriter.writerow([current_uuid, lat, lon, pop])
     print('Images, get."')
     # Get Images
-    with open(main_data_fille, "r", newline='') as tsvfile:
+    with open(main_data_file, "r", newline='') as tsvfile:
         tsvreader = csv.reader(tsvfile, delimiter='\t', quotechar='|')
         for row in tsvreader:
             if row[0] in error_index:
