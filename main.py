@@ -25,6 +25,13 @@ if os.path.exists(C.SATPOP_ERR_IMAGE_FILE):
 
 print("Ignoring: {}".format(len(error_index)))
 
+# Init Already Downloaded Set
+downloaded_set = set()
+for file in os.listdir(C.SATPOP_IMAGE_FOLDER):
+    downloaded_set.add(file.split('.')[0])
+
+print("Already Downloaded: {}".format(len(downloaded_set)))
+
 def get_pop(lat, lon):
     try:
         r = requests.get(C.CENSUS_URL, timeout=2,
@@ -59,10 +66,10 @@ def get_pop(lat, lon):
 
 
 def get_image(given_uuid, lat, lon):
-    fname = os.path.join(C.SATPOP_IMAGE_FOLDER, "{}.{}".format(given_uuid, "png"))
-    if os.path.exists(fname):
+    if given_uuid in downloaded_set:
         print(".")
         return
+    fname = os.path.join(C.SATPOP_IMAGE_FOLDER, "{}.{}".format(given_uuid, "png"))
     try:
         r = requests.get(C.NASA_URL, {"api_key": C.NASA_API_KEY,
                                       # "date": C.DATE,
@@ -180,10 +187,6 @@ class GeoNamesData:
         size = min(len(all_data), C.NUM_GEO_CITIES)
         self.data = random.sample(all_data, size)
 
-
-def image_already_downloaded(given_uuid):
-    fname = os.path.join(C.SATPOP_IMAGE_FOLDER, "{}.{}".format(given_uuid, "png"))
-    return os.path.exists(fname)
 
 def get_num_of_lines(fname):
     if os.path.exists(fname):
