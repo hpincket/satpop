@@ -198,9 +198,8 @@ def get_num_of_lines(fname):
 
 def main():
     gnd = GeoNamesData(C.SATPOP_GEONAMES_FILE, C.SATPOP_GEONAMES_CACHE_FILE)
-    main_data_file = os.path.join(C.SATPOP_DATA_FOLDER, "data.tsv")
     # Cache -> Data
-    to_skip = get_num_of_lines(main_data_file)
+    to_skip = get_num_of_lines(C.SATPOP_MAIN_DATA_FILE)
     print("Will skip {} data rows.".format(to_skip))
     with open(main_data_file, "a", newline='') as tsvfile:
         tsvwriter = csv.writer(tsvfile, delimiter='\t', quotechar='|')
@@ -216,7 +215,7 @@ def main():
                 tsvwriter.writerow([current_uuid, lat, lon, pop])
     print('Images, get."')
     # Get Images
-    with open(main_data_file, "r", newline='') as tsvfile:
+    with open(C.SATPOP_MAIN_DATA_FILE, "r", newline='') as tsvfile:
         tsvreader = csv.reader(tsvfile, delimiter='\t', quotechar='|')
         for row in tsvreader:
             if row[0] in error_index:

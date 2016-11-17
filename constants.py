@@ -15,6 +15,7 @@ SATPOP_GEONAMES_FILE = os.path.join(SATPOP_DATA_FOLDER, 'US.txt')
 SATPOP_GEONAMES_CACHE_FILE = os.path.join(SATPOP_DATA_FOLDER, 'US.cache')
 
 SATPOP_ERR_IMAGE_FILE = os.path.join(SATPOP_DATA_FOLDER, "image-errors.txt")
+SATPOP_MAIN_DATA_FILE = os.path.join(SATPOP_DATA_FOLDER, "data.tsv")
 
 GAZ_FILE = os.path.join(SATPOP_DATA_FOLDER, "Gaz_tracts_national.txt")
 
