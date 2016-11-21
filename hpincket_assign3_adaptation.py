@@ -20,7 +20,7 @@ def max_pool_2x2(x):
 
 sess = tf.Session()
 
-x = tf.placeholder(tf.float32, shape=[None, 784])
+x = tf.placeholder(tf.float32, shape=[None, 3*512*512])
 y_ = tf.placeholder(tf.float32, shape=[None, 10])
 
 W_conv1 = weight_variable([5, 5, 1, 32])

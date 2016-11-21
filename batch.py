@@ -23,11 +23,12 @@ class SatPopBatch:
                 ans = []
                 for lpixels in pixels:
                     ans.extend([v for i,v in enumerate(lpixels) if ((i+1) % 4) != 0 or i == 0])
-                image_1d = numpy.array(map(numpy.uint8, ans))
+                image_1d = numpy.array(list(map(numpy.uint8, ans)))
             else:
                 image_2d = numpy.vstack(map(numpy.uint8, pixels))
                 image_1d = numpy.reshape(image_2d, (512*512*3))
-        return (image_1d ,float(row[3]))
+            image_3d = numpy.reshape(image_1d, (512, 512, 3))
+        return (image_3d, float(row[3]))
 
     def __iter__(self):
         return self
