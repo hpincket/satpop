@@ -94,6 +94,8 @@ def main():
     
     grayscale_values_by_image = defaultdict(list)
     grayscale_values_in_sequence = list()
+    color_values_by_image = defaultdict(list)
+    color_values_in_sequence = list()
     unpopulated_populated_in_sequence = list()
     
     print('loading satellite images')
@@ -110,19 +112,24 @@ def main():
         
         image_array = misc.imread(join(image_directory, fn)) # 512 x 512 x 3
         grayscale_values = list()
+        color_values = list()
         
         for i in range(image_width):
             for j in range(image_width):
                 grayscale_values.append(color_to_grayscale(image_array[i][j]))
+                color_values.append(image_array[i][j][:3])
         
         grayscale_values_by_image[fn] = grayscale_values
         grayscale_values_in_sequence.append(grayscale_values)
+        color_values_by_image[fn] = color_values
+        color_values_in_sequence.append(color_values)
         unpopulated_populated_in_sequence.append(unpopulated_populated_by_image[fn])
         # print fn
         # print population_density_by_image[fn]
         # print unpopulated_populated_by_image[fn]
     
     print len(grayscale_values_in_sequence)
+    print len(color_values_in_sequence)
     print len(unpopulated_populated_in_sequence)
     
     y_0_count = 0
@@ -215,9 +222,11 @@ def main():
     sess.run(tf.global_variables_initializer())
     
     print np.asarray(grayscale_values_in_sequence).shape
+    print np.asarray(color_values_in_sequence).shape
     print np.asarray(unpopulated_populated_in_sequence).shape
     
-    images_array = np.asarray(grayscale_values_in_sequence)
+    # images_array = np.asarray(grayscale_values_in_sequence)
+    images_array = np.asarray(color_values_in_sequence)
     labels_array = np.asarray(unpopulated_populated_in_sequence)
     
     training_steps = num_batches - 1
