@@ -221,21 +221,23 @@ def main():
     labels_array = np.asarray(unpopulated_populated_in_sequence)
     
     training_steps = num_batches - 1
-    test_slice_index = 0 # rotate for cross-validation
     
-    (training_images, test_images) = cross_validation_slicing(images_array, test_slice_index, batch_size)
-    (training_labels, test_labels) = cross_validation_slicing(labels_array, test_slice_index, batch_size)
-    
-    for i in range(training_steps):
-        batch_start = i * batch_size
-        batch_end = batch_start + batch_size
-        train_accuracy = accuracy.eval(feed_dict={x: training_images[batch_start:batch_end], y_: training_labels[batch_start:batch_end], keep_prob: 1.0})
+    for test_slice_index in range(num_batches): # cross-validation
+        print("fold: " + str(test_slice_index))
         
-        print("step %d, training accuracy %g"%(i, train_accuracy))
+        (training_images, test_images) = cross_validation_slicing(images_array, test_slice_index, batch_size)
+        (training_labels, test_labels) = cross_validation_slicing(labels_array, test_slice_index, batch_size)
         
-        train_step.run(feed_dict={x: training_images[batch_start:batch_end], y_: training_labels[batch_start:batch_end], keep_prob: 0.5})
-    
-    print("test accuracy %g"%accuracy.eval(feed_dict={x: test_images, y_: test_labels, keep_prob: 1.0}))    
+        for i in range(training_steps):
+            batch_start = i * batch_size
+            batch_end = batch_start + batch_size
+            train_accuracy = accuracy.eval(feed_dict={x: training_images[batch_start:batch_end], y_: training_labels[batch_start:batch_end], keep_prob: 1.0})
+            
+            print("step %d, training accuracy %g"%(i, train_accuracy))
+            
+            train_step.run(feed_dict={x: training_images[batch_start:batch_end], y_: training_labels[batch_start:batch_end], keep_prob: 0.5})
+        
+        print("test accuracy %g"%accuracy.eval(feed_dict={x: test_images, y_: test_labels, keep_prob: 1.0}))
 
 if __name__ == '__main__':
     main()
