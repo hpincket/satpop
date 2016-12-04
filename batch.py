@@ -60,7 +60,6 @@ class RecordLoadingThread(threading.Thread):
         with open(fname, "rb") as imgfd:
             r = png.Reader(file=imgfd)
             h, w, pixels, metadata = r.read()
-            print(h, w)
             assert (h == w)
             if metadata['alpha']:
                 ans = []

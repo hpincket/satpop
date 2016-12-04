@@ -39,8 +39,8 @@ sess = tf.Session()
 x = tf.placeholder(tf.float32, shape=[None, IMAGE_WIDTH, IMAGE_HEIGHT, 3])
 y_ = tf.placeholder(tf.float32, shape=[None, OPTIONS])
 
-W_conv1 = weight_variable([5, 5, 3, 32])
-b_conv1 = bias_variable([32])
+W_conv1 = weight_variable([16, 16, 3, 64])
+b_conv1 = bias_variable([64])
 # We have -1 in the shape to retain data size. We need this for unknown batchsize.
 # x_image = tf.reshape(x, [-1, IMAGE_WIDTH, IMAGE_HEIGHT, 1])
 
@@ -51,11 +51,13 @@ h_pool1 = max_pool(2, h_conv1)
 
 # Size: h_pool1 is [batchsize, 14, 14, 32]
 # Size: h_pool1 is [batchsize, 256, 256, 32]
-W_conv2 = weight_variable([5, 5, 32, 64])
+print(h_pool1.get_shape())
+W_conv2 = weight_variable([5, 5, 64, 64])
 b_conv2 = bias_variable([64])
 h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 h_pool2 = max_pool(4, h_conv2)
 
+print(h_pool2.get_shape())
 quarter_size = IMAGE_WIDTH / (4 * 2)
 # Densly connected layer
 # Our features are now all 64 filters at all locations, just picture this as
@@ -104,7 +106,7 @@ pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch
                            label_transformer=transformer, image_dimension=3)
 with pspb as spb:
     for i, batch in enumerate(spb):
-        if i > 160:
+        if i > 60:
             break
         batching_img, batching_lab = batch
         if i % 2 == 0:
