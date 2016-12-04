@@ -130,7 +130,7 @@ def main():
     y_2_count = 0
     y_3_count = 0
     y_4_count = 0
-    for i in unpopulated_populated_in_sequence[50:]:
+    for i in unpopulated_populated_in_sequence:
         if i == y_0:
             y_0_count += 1
         elif i == y_1:

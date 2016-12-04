@@ -130,7 +130,7 @@ def main():
     y_2_count = 0
     y_3_count = 0
     y_4_count = 0
-    for i in unpopulated_populated_in_sequence[50:]:
+    for i in unpopulated_populated_in_sequence:
         if i == y_0:
             y_0_count += 1
         elif i == y_1:
@@ -156,12 +156,12 @@ def main():
     sess = tf.InteractiveSession()
     
     # Placeholders
-    x = tf.placeholder(tf.float32, shape=[None, image_width * image_width])
+    x = tf.placeholder(tf.float32, shape=[None, image_width * image_width, 3])
     y_ = tf.placeholder(tf.float32, shape=[None, num_classes])
     
     # First Convolutional Layer
     patch_size = 5
-    W_conv1 = weight_variable([patch_size, patch_size, 1, 32])
+    W_conv1 = weight_variable([patch_size, patch_size, 3, 32])
     b_conv1 = bias_variable([32])
     
     x_image = tf.reshape(x, [-1, image_width, image_width, 1])
