@@ -2,17 +2,20 @@ import numpy as np
 import tensorflow as tf
 
 import constants as C
-from batch import ParallelSatPopBatch
+from batch import ParallelSatPopBatch, BucketLabelTransformer
+from metadata_utils import generate_even_divisions
+
+transformer = BucketLabelTransformer(generate_even_divisions(10))
 
 # ########################################
 
-IMAGE_WIDTH = 512
-IMAGE_HEIGHT = 512
+IMAGE_WIDTH = 128
+IMAGE_HEIGHT = 128 
 IMAGE_SIZE = IMAGE_WIDTH * IMAGE_HEIGHT * 3
 
-OPTIONS = 5
+OPTIONS = transformer.number_of_labels()
 
-batchsize = 100
+batchsize = 20
 learning_rate = 0.05
 
 img = tf.placeholder(tf.float32, [None, IMAGE_SIZE])
@@ -34,7 +37,7 @@ pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch
 with pspb as spb:
     for i, batch in enumerate(spb):
         print(batch)
-        if i > 4:
+        if i > 100:
             break
         batching_img, batching_lab = batch
         sess.run(train_step, feed_dict={img: batching_img,
@@ -52,7 +55,7 @@ all_test_accuracy = []
 with ptest_spb as test_spb:
     for i, batch in enumerate(test_spb):
         print("iteration {}".format(i))
-        if i > 2:
+        if i > 10:
             break
         batching_img, batching_lab = batch
         new_batch_accuracy = sess.run(accuracy, feed_dict={img: batching_img,

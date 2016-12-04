@@ -10,7 +10,7 @@ NASA_URL = "https://api.nasa.gov/planetary/earth/imagery"
 CENSUS_URL = "http://data.fcc.gov/api/block/find" # ?format=json&latitude=42.456&longitude=-74.987&showall=true"
 
 SATPOP_DATA_FOLDER = os.environ.get('SATPOP_DATA_FOLDER', r'SATPOP_DATA')
-SATPOP_IMAGE_FOLDER = os.path.join(SATPOP_DATA_FOLDER, 'sat_images')
+SATPOP_IMAGE_FOLDER = os.path.join(SATPOP_DATA_FOLDER, os.environ.get('SATPOP_IMG_FOLDER', 'sat_images'))
 SATPOP_GEONAMES_FILE = os.path.join(SATPOP_DATA_FOLDER, 'US.txt')
 SATPOP_GEONAMES_CACHE_FILE = os.path.join(SATPOP_DATA_FOLDER, 'US.cache')
 

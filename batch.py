@@ -1,7 +1,7 @@
 import csv
 import random
 import threading
-from Queue import Queue
+from Queue import Queue, Empty, Full
 from os.path import join
 from threading import Event
 
@@ -9,6 +9,7 @@ import numpy as np
 import png
 
 import constants as C
+from metadata_utils import generate_even_divisions
 
 
 class BucketLabelTransformer():
@@ -43,19 +44,24 @@ class RecordLoadingThread(threading.Thread):
     def run(self):
         while not self.stop_event.is_set():
             # Continually complete tasks
-            row_task = self.task_queue.get(block=True, timeout=None)
+            row_task = self.task_queue.get(block=True, timeout=5)
             try:
                 row_result = self.__process_row(row_task)
-                self.result_queue.put(row_result, block=True, timeout=None)
+                self.result_queue.put(row_result, block=True, timeout=10)
             except IOError as e:
                 pass
+            except Empty as e:
+                pass
+            except Full as e:
+                pass
+
 
     def __process_img(self, fname, dim):
         with open(fname, "rb") as imgfd:
             r = png.Reader(file=imgfd)
             h, w, pixels, metadata = r.read()
-            assert (h == 512)
-            assert (w == 512)
+            print(h, w)
+            assert (h == w)
             if metadata['alpha']:
                 ans = []
                 for lpixels in pixels:
@@ -63,11 +69,11 @@ class RecordLoadingThread(threading.Thread):
                 image_1d = np.array(list(map(np.uint8, ans)))
             else:
                 image_2d = np.vstack(map(np.uint8, pixels))
-                image_1d = np.reshape(image_2d, (512 * 512 * 3))
+                image_1d = np.reshape(image_2d, (h * h * 3))
             if dim == 1:
                 ret_image = image_1d
             elif dim == 3:
-                ret_image = np.reshape(image_1d, (512, 512, 3))
+                ret_image = np.reshape(image_1d, (h, h, 3))
             else:
                 raise ("Invalid image dimension")
             return ret_image
@@ -136,6 +142,7 @@ class SatPopBatch:
         :return: ([serialized_imgs], [labels])
         '''
         # First, add more tasks to the task_queue if necessary
+        print("Tasks: {}\tImgs: {}".format(self.task_queue.qsize(), self.result_queue.qsize()))
         while self.task_queue.qsize() < 500:
             if self.random:
                 self.__add_tasks_from_random_offset(self.batch_size)
@@ -168,9 +175,9 @@ class ParallelSatPopBatch:
         if label_transformer:
             self.label_transformer = label_transformer
         else:
-            self.label_transformer = BucketLabelTransformer([10, 100, 1000, 10000, 100000])
+            self.label_transformer = BucketLabelTransformer(generate_even_divisions(10))
         self.task_queue = Queue(maxsize=1000)
-        self.result_queue = Queue(maxsize=300)  # This must be smaller because each item takes up more space
+        self.result_queue = Queue(maxsize=3000)  # This must be smaller because each item takes up more space
         self.stop_event = Event()  # Used to signal termination
 
     def __enter__(self):
