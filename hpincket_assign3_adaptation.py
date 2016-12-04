@@ -3,17 +3,18 @@ import tensorflow as tf
 
 import constants as C
 from batch import BucketLabelTransformer, ParallelSatPopBatch
+from metadata_utils import generate_even_divisions
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
-transformer = BucketLabelTransformer([10, 100, 1000, 10000])
+transformer = BucketLabelTransformer(generate_even_divisions(3))
 batchsize = 10
 
 OPTIONS = transformer.number_of_labels()
 
-IMAGE_HEIGHT = 512
-IMAGE_WIDTH = 512
+IMAGE_HEIGHT = 128
+IMAGE_WIDTH = 128
 
 def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
@@ -75,12 +76,18 @@ W_fc2 = weight_variable([NEW_SIZE, OPTIONS])
 b_fc2 = bias_variable([OPTIONS])
 y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
+normalized = tf.sigmoid(y_conv)
+weighted = tf.reduce_sum(tf.mul(normalized, transformer.bucket_maxes))
+weighted_error = tf.reduce_sum(tf.square(y_ - weighted))
+
 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_conv, y_))
+# train_step = tf.train.AdamOptimizer(1e-4).minimize(weighted_error)
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 sess.run(tf.initialize_all_variables())
 
+print(weighted.get_shape())
 # for i in range(2000):
 # batch = mnist.train.next_batch(50)
 # if i%100 == 0:
@@ -97,11 +104,12 @@ pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch
                            label_transformer=transformer, image_dimension=3)
 with pspb as spb:
     for i, batch in enumerate(spb):
-        if i > 10:
+        if i > 160:
             break
         batching_img, batching_lab = batch
         if i % 2 == 0:
-            train_accuracy = accuracy.eval(session=sess, feed_dict={
+            train_accuracy, weighted_res, weighted_error_res, y_conv_res = sess.run(
+                (accuracy, weighted, weighted_error, y_conv), feed_dict={
                 x: batching_img,
                 y_: batching_lab,
                 keep_prob: 1.0
