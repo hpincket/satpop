@@ -13,16 +13,22 @@ from metadata_utils import generate_even_divisions
 
 
 class BucketLabelTransformer():
+    '''
+    Modifies populations to labels
+    bucket_maxes is a list of values which define the upper bound on the buckets.
+    '''
     def __init__(self, bucket_maxes):
         self.bucket_maxes = bucket_maxes
 
     def transform_label(self, pop):
+        ''' Given a population, determine which bucket it belongs to'''
         for i, max in enumerate(self.bucket_maxes):
             if pop < max:
                 return i
         return len(self.bucket_maxes)
 
     def number_of_labels(self):
+        ''' The number of label options'''
         return len(self.bucket_maxes)
 
 
@@ -33,6 +39,15 @@ class RecordLoadingThread(threading.Thread):
     '''
 
     def __init__(self, threadID, stop_event, image_dimension, image_dir, task_queue, result_queue):
+        '''
+        Create a new thread
+        :param threadID: a given number identifying this thread for debugging
+        :param stop_event: used to signal an exit from the while loop
+        :param image_dimension: 1 or 3. How the image should be processed
+        :param image_dir:
+        :param task_queue: where info from data.tsv is placed. This thread consumes.
+        :param result_queue: where images and labels are placed. This thread produces.
+        '''
         super(RecordLoadingThread, self).__init__()
         self.threadID = threadID
         self.task_queue = task_queue
@@ -47,7 +62,7 @@ class RecordLoadingThread(threading.Thread):
             row_task = self.task_queue.get(block=True, timeout=5)
             try:
                 row_result = self.__process_row(row_task)
-                if row_result[0] is not None:
+                if row_result[0] is not None:  # Used for odd error case.
                     self.result_queue.put(row_result, block=True, timeout=10)
             except IOError as e:
                 pass
@@ -149,7 +164,7 @@ class SatPopBatch:
             y_2 = [0.05, 0.2, 0.5, 0.2, 0.05] # suburban
             y_3 = [0.0, 0.05, 0.2, 0.5, 0.25] # urban
             y_4 = [0.0, 0.0, 0.05, 0.2, 0.75] # highly urban
-            
+
             for i, val in enumerate(dense_labels):
                 if val == 0:
                     one_hots[i] = y_0
