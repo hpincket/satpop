@@ -16,16 +16,13 @@ def bias_variable(shape):
 def conv2d(x, W):
     return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
-def max_pool(pick, x):
-    if pick == 2:
-        return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-    elif pick == 4:
-        return tf.nn.max_pool(x, ksize=[1, 4, 4, 1], strides=[1, 4, 4, 1], padding='SAME')
+def max_pool(pool_size, x):
+    return tf.nn.max_pool(x, ksize=[1, pool_size, pool_size, 1], strides=[1, pool_size, pool_size, 1], padding='SAME')
 
 def main():
     num_buckets = 3
     transformer = BucketLabelTransformer(generate_even_divisions(num_buckets))
-    batchsize = 5
+    batch_size = 10
 
     OPTIONS = transformer.number_of_labels()
 
@@ -43,25 +40,27 @@ def main():
     patch_size = 5
     W_conv1 = weight_variable([patch_size, patch_size, 3, 32])
     b_conv1 = bias_variable([32])
-    # We have -1 in the shape to retain data size. We need this for unknown batchsize.
+    # We have -1 in the shape to retain data size. We need this for unknown batch_size.
     x_image = tf.reshape(x, [-1, IMAGE_WIDTH, IMAGE_HEIGHT, 3])
+    
+    pool_size = 2
 
     h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
-    # Size: h_conv1 is [batchsize, 28, 28, 32]
-    # Size: h_conv1 is [batchsize, 512, 512, 32]
-    h_pool1 = max_pool(4, h_conv1)
+    # Size: h_conv1 is [batch_size, 28, 28, 32]
+    # Size: h_conv1 is [batch_size, 512, 512, 32]
+    h_pool1 = max_pool(pool_size, h_conv1)
     print(h_pool1.get_shape())
     
     # Second Convolutional Layer
-    # Size: h_pool1 is [batchsize, 14, 14, 32]
-    # Size: h_pool1 is [batchsize, 256, 256, 32]
+    # Size: h_pool1 is [batch_size, 14, 14, 32]
+    # Size: h_pool1 is [batch_size, 256, 256, 32]
     W_conv2 = weight_variable([patch_size, patch_size, 32, 64])
     b_conv2 = bias_variable([64])
     h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
-    h_pool2 = max_pool(4, h_conv2)
+    h_pool2 = max_pool(pool_size, h_conv2)
 
     print(h_pool2.get_shape())
-    quarter_size = IMAGE_WIDTH / (4 * 4)
+    quarter_size = IMAGE_WIDTH / (pool_size * pool_size)
     # Densly connected layer
     # Our features are now all 64 filters at all locations, just picture this as
     # the original neural network from assign1.
@@ -92,51 +91,36 @@ def main():
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     sess.run(tf.global_variables_initializer())
 
-    print(weighted.get_shape())
-    # for i in range(2000):
-    # batch = mnist.train.next_batch(50)
-    # if i%100 == 0:
-    # train_accuracy = accuracy.eval(session=sess, feed_dict={
-    # x:batch[0], y_: batch[1], keep_prob: 1.0})
-    # print("step %d, training accuracy %g"%(i, train_accuracy))
-    # sess.run(train_step, feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
-
-    # print("test accuracy %g"%accuracy.eval(session=sess, feed_dict={
-    # x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
-
-
-    pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize, label_transformer=transformer, image_dimension=3)
+    pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batch_size, label_transformer=transformer, image_dimension=3)
+    
     with pspb as spb:
         for i, batch in enumerate(spb):
-            if i >= 80:
+            if i >= 40:
                 break
             
             batching_img, batching_lab = batch
             
-            if i % 2 == 0:
-                train_accuracy = accuracy.eval(feed_dict={x: batching_img, y_: batching_lab, keep_prob: 1.0})
-                
+            if i % 5 == 0:
+                train_accuracy = sess.run(accuracy, feed_dict={x: batching_img, y_: batching_lab, keep_prob: 1.0})
+                print("iteration {}".format(i))
                 print(train_accuracy)
             
-            train_step.run(feed_dict={x: batching_img, y_: batching_lab, keep_prob: 0.5})
+            sess.run(train_step, feed_dict={x: batching_img, y_: batching_lab, keep_prob: 0.5})
 
     print("TESTING")
 
-    ptest_spb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize, image_dimension=3, random=True, label_transformer=transformer)
-
+    ptest_spb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batch_size, image_dimension=3, random=True, label_transformer=transformer)
     all_test_accuracy = []
 
     with ptest_spb as test_spb:
         for i, batch in enumerate(test_spb):
-            if i >= 20:
+            if i >= 10:
                 break
             
             print("iteration {}".format(i))
             
             batching_img, batching_lab = batch
-            new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img,
-                                                               y_: batching_lab,
-                                                               keep_prob: 1.0})
+            new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img, y_: batching_lab, keep_prob: 1.0})
             all_test_accuracy.append(new_batch_accuracy)
 
     print("Done with testing")
