@@ -9,7 +9,7 @@ from metadata_utils import generate_even_divisions
 # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
 transformer = BucketLabelTransformer(generate_even_divisions(3))
-batchsize = 10
+batchsize = 20
 
 OPTIONS = transformer.number_of_labels()
 
@@ -106,7 +106,7 @@ pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch
                            label_transformer=transformer, image_dimension=3)
 with pspb as spb:
     for i, batch in enumerate(spb):
-        if i > 60:
+        if i > 120:
             break
         batching_img, batching_lab = batch
         if i % 2 == 0:
