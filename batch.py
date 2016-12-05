@@ -57,6 +57,7 @@ class RecordLoadingThread(threading.Thread):
         self.stop_event = stop_event
 
     def run(self):
+        ''' Loop forever '''
         while not self.stop_event.is_set():
             # Continually complete tasks
             row_task = self.task_queue.get(block=True, timeout=5)
@@ -73,11 +74,13 @@ class RecordLoadingThread(threading.Thread):
 
 
     def __process_img(self, fname, dim):
+        ''' Open image, return it in the correct format '''
         with open(fname, "rb") as imgfd:
             r = png.Reader(file=imgfd)
             h, w, pixels, metadata = r.read()
             assert (h == w)
             if metadata['alpha']:
+                # Lord knows why this is necessary
                 ans = []
                 for lpixels in pixels:
                     ans.extend([v for i, v in enumerate(lpixels) if ((i + 1) % 4) != 0 or i == 0])
@@ -87,10 +90,7 @@ class RecordLoadingThread(threading.Thread):
                 try:
                     image_1d = np.reshape(image_2d, (h * h * 3))
                 except ValueError:
-                    # print(metadata)
-                    # print(pixels)
-                    # print(h)
-                    return None
+                    return None  # Will be ignored later.
             if dim == 1:
                 ret_image = image_1d
             elif dim == 3:
@@ -110,14 +110,11 @@ class SatPopBatch:
     The image/label iterator. Should be used inside a with ParallelSatPopBatcher
     '''
 
-    def __init__(self,
-                 data_fname,
-                 batch_size,
-                 task_queue,
-                 result_queue,
-                 label_transformer,
-                 random=False
-                 ):
+    def __init__(self, data_fname, batch_size, task_queue, result_queue, label_transformer, random=False):
+        '''
+        Create a new iterator.
+        Most of these items are passed on to worker threads.
+        '''
         self.data_fname = data_fname
         self.batch_size = batch_size
         self.task_queue = task_queue
@@ -127,10 +124,12 @@ class SatPopBatch:
         self.random = random
 
     def __add_tasks_from_random_offset(self, num):
+        ''' Used if random=True '''
         self.offset = random.randint(0, 40000)
         self.__add_tasks(self.batch_size)
 
     def __add_tasks(self, num):
+        ''' Seeks to offset, reads num files'''
         if not self.random and self.offset > 42000:
             raise StopIteration
         with open(self.data_fname, "r") as data:
@@ -145,7 +144,7 @@ class SatPopBatch:
 
     def __make_one_hot(self, dense_labels, max):
         one_hots = np.zeros((len(dense_labels), self.label_transformer.number_of_labels()))
-        
+        max = 21
         if max == 3:
             y_0 = [0.75, 0.25, 0.0] # rural
             y_1 = [0.25, 0.5, 0.25] # surburban
