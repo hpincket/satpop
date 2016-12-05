@@ -106,46 +106,44 @@ print(weighted.get_shape())
 # print("test accuracy %g"%accuracy.eval(session=sess, feed_dict={
 # x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
+def test(n):
+    ptest_spb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize,
+                                    image_dimension=3,
+                                    random=True, label_transformer=transformer)
+    all_test_accuracy = []
+    with ptest_spb as test_spb:
+        for i, batch in enumerate(test_spb):
+            print("iteration {}".format(i))
+            if i >= n:
+                break
+            batching_img, batching_lab = batch
+            new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img,
+                                                               y_: batching_lab,
+                                                               keep_prob: 1.0})
+            all_test_accuracy.append(new_batch_accuracy)
+    print(np.mean(all_test_accuracy))
 
 pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize,
                            label_transformer=transformer, image_dimension=3)
 with pspb as spb:
     for i, batch in enumerate(spb):
+        if i % 10 == 0:
+            test(10)
         if i > 120:
             break
         batching_img, batching_lab = batch
-        if i % 2 == 0:
-            train_accuracy, weighted_res, weighted_error_res, y_conv_res = sess.run(
-                (accuracy, weighted, weighted_error, y_conv), feed_dict={
-                x: batching_img,
-                y_: batching_lab,
-                keep_prob: 1.0
-            })
+        # if i % 2 == 0:
+        # train_accuracy, weighted_res, weighted_error_res, y_conv_res = sess.run(
+        # (accuracy, weighted, weighted_error, y_conv), feed_dict={
+        # x: batching_img,
+        # y_: batching_lab,
+        # keep_prob: 1.0
+        # })
             # print(weighted_res)
             # print(weighted_error_res)
-            print(train_accuracy)
+        # print(train_accuracy)
         sess.run(train_step, feed_dict={x: batching_img,
                                         y_: batching_lab,
                                         keep_prob: 0.5})
 
-print("TESTING")
-
-ptest_spb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize, image_dimension=3,
-                                random=True, label_transformer=transformer)
-test_imgs = np.array((0, 2))
-test_labs = np.array((0, 2))
-all_test_accuracy = []
-with ptest_spb as test_spb:
-    for i, batch in enumerate(test_spb):
-        print("iteration {}".format(i))
-        if i > 5:
-            break
-        batching_img, batching_lab = batch
-        new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img,
-                                                           y_: batching_lab,
-                                                           keep_prob: 1.0})
-        all_test_accuracy.append(new_batch_accuracy)
-
-print("Done with testing")
-print(all_test_accuracy)
-print(np.mean(all_test_accuracy))
+print("Fin")
