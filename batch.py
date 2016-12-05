@@ -125,17 +125,19 @@ class SatPopBatch:
         one_hots = np.zeros((len(dense_labels), self.label_transformer.number_of_labels()))
         
         if max == 3:
-            y_0 = [0.75, 0.25, 0.0] # rural
-            y_1 = [0.25, 0.5, 0.25] # surburban
-            y_2 = [0.0, 0.25, 0.75] # urban
-            
             for i, val in enumerate(dense_labels):
-                if val == 0:
-                    one_hots[i] = y_0
-                elif val == 1:
-                    one_hots[i] = y_1
-                elif val == 2:
-                    one_hots[i] = y_2
+                one_hots[i, val] = 1
+            # y_0 = [0.75, 0.25, 0.0] # rural
+            # y_1 = [0.25, 0.5, 0.25] # surburban
+            # y_2 = [0.0, 0.25, 0.75] # urban
+            
+            # for i, val in enumerate(dense_labels):
+                # if val == 0:
+                    # one_hots[i] = y_0
+                # elif val == 1:
+                    # one_hots[i] = y_1
+                # elif val == 2:
+                    # one_hots[i] = y_2
         elif max == 5:
             y_0 = [0.75, 0.2, 0.05, 0.0, 0.0] # unpopulated
             y_1 = [0.25, 0.5, 0.2, 0.05, 0.0] # rural

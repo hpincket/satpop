@@ -51,7 +51,7 @@ def main():
     unpopulated_populated = list()
     unpopulated_populated_by_image = defaultdict(list)
     num_classes = 5
-    num_batches = 5
+    num_batches = 2
     batch_size = 50
     
     y_0 = [0.75, 0.2, 0.05, 0.0, 0.0] # unpopulated
