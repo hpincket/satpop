@@ -145,7 +145,7 @@ class SatPopBatch:
 
     def __make_one_hot(self, dense_labels, max):
         one_hots = np.zeros((len(dense_labels), self.label_transformer.number_of_labels()))
-        
+	max = 21
         if max == 3:
             y_0 = [0.75, 0.25, 0.0] # rural
             y_1 = [0.25, 0.5, 0.25] # surburban

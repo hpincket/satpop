@@ -9,7 +9,7 @@ from metadata_utils import generate_even_divisions
 # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
 transformer = BucketLabelTransformer(generate_even_divisions(5))
-batchsize = 20
+batchsize = 40
 
 OPTIONS = transformer.number_of_labels()
 
@@ -133,7 +133,7 @@ with pspb as spb:
     for i, batch in enumerate(spb):
         # if i % 10 == 0:
         # test(10)
-        if i > 120:
+        if i > 240:
             break
         batching_img, batching_lab = batch
         if i % 2 == 0:
