@@ -27,16 +27,34 @@ cross_entropy = tf.reduce_mean(-tf.reduce_sum(labels * tf.log(P), reduction_indi
 
 train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(cross_entropy)
 
+correct_prediction = tf.equal(tf.argmax(P, 1), tf.argmax(labels, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 # ########################################
 
 init = tf.initialize_all_variables()
 sess = tf.Session()
 sess.run(init)
 
+
+def test(n):
+    ptest_spb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize, random=True)
+    all_test_accuracy = []
+    with ptest_spb as test_spb:
+        for i, batch in enumerate(test_spb):
+            if i >= n:
+                break
+            batching_img, batching_lab = batch
+            new_batch_accuracy = sess.run(accuracy, feed_dict={img: batching_img,
+                                                               labels: batching_lab})
+            all_test_accuracy.append(new_batch_accuracy)
+    print(np.mean(all_test_accuracy))
+
 pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize)
 with pspb as spb:
     for i, batch in enumerate(spb):
-        print(batch)
+        # print(batch)
+        if i % 10 == 0:
+            test(10)
         if i > 100:
             break
         batching_img, batching_lab = batch
@@ -45,23 +63,4 @@ with pspb as spb:
 
 # ########################################
 
-correct_prediction = tf.equal(tf.argmax(P, 1), tf.argmax(labels, 1))
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-ptest_spb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize, random=True)
-test_imgs = np.array((0, 2))
-test_labs = np.array((0, 2))
-all_test_accuracy = []
-with ptest_spb as test_spb:
-    for i, batch in enumerate(test_spb):
-        print("iteration {}".format(i))
-        if i > 10:
-            break
-        batching_img, batching_lab = batch
-        new_batch_accuracy = sess.run(accuracy, feed_dict={img: batching_img,
-                                                           labels: batching_lab})
-        all_test_accuracy.append(new_batch_accuracy)
-
-print("Done with testing")
-print(all_test_accuracy)
-print(np.mean(all_test_accuracy))
+test(10)

@@ -47,7 +47,8 @@ class RecordLoadingThread(threading.Thread):
             row_task = self.task_queue.get(block=True, timeout=5)
             try:
                 row_result = self.__process_row(row_task)
-                self.result_queue.put(row_result, block=True, timeout=10)
+                if row_result[0] is not None:
+                    self.result_queue.put(row_result, block=True, timeout=10)
             except IOError as e:
                 pass
             except Empty as e:
@@ -68,7 +69,13 @@ class RecordLoadingThread(threading.Thread):
                 image_1d = np.array(list(map(np.uint8, ans)))
             else:
                 image_2d = np.vstack(map(np.uint8, pixels))
-                image_1d = np.reshape(image_2d, (h * h * 3))
+                try:
+                    image_1d = np.reshape(image_2d, (h * h * 3))
+                except ValueError:
+                    # print(metadata)
+                    # print(pixels)
+                    # print(h)
+                    return None
             if dim == 1:
                 ret_image = image_1d
             elif dim == 3:
@@ -136,24 +143,24 @@ class SatPopBatch:
                     one_hots[i] = y_1
                 elif val == 2:
                     one_hots[i] = y_2
-        elif max == 5:
-            y_0 = [0.75, 0.2, 0.05, 0.0, 0.0] # unpopulated
-            y_1 = [0.25, 0.5, 0.2, 0.05, 0.0] # rural
-            y_2 = [0.05, 0.2, 0.5, 0.2, 0.05] # suburban
-            y_3 = [0.0, 0.05, 0.2, 0.5, 0.25] # urban
-            y_4 = [0.0, 0.0, 0.05, 0.2, 0.75] # highly urban
-            
-            for i, val in enumerate(dense_labels):
-                if val == 0:
-                    one_hots[i] = y_0
-                elif val == 1:
-                    one_hots[i] = y_1
-                elif val == 2:
-                    one_hots[i] = y_2
-                elif val == 3:
-                    one_hots[i] = y_3
-                elif val == 4:
-                    one_hots[i] = y_4
+                    # elif max == 5:
+                    # y_0 = [0.75, 0.2, 0.05, 0.0, 0.0] # unpopulated
+                    # y_1 = [0.25, 0.5, 0.2, 0.05, 0.0] # rural
+                    # y_2 = [0.05, 0.2, 0.5, 0.2, 0.05] # suburban
+                    # y_3 = [0.0, 0.05, 0.2, 0.5, 0.25] # urban
+                    # y_4 = [0.0, 0.0, 0.05, 0.2, 0.75] # highly urban
+                    #
+                    # for i, val in enumerate(dense_labels):
+                    # if val == 0:
+                    # one_hots[i] = y_0
+                    # elif val == 1:
+                    # one_hots[i] = y_1
+                    # elif val == 2:
+                    # one_hots[i] = y_2
+                    # elif val == 3:
+                    # one_hots[i] = y_3
+                    # elif val == 4:
+                    # one_hots[i] = y_4
         else:
             for i, val in enumerate(dense_labels):
                 one_hots[i, val] = 1
@@ -174,7 +181,7 @@ class SatPopBatch:
         :return: ([serialized_imgs], [labels])
         '''
         # First, add more tasks to the task_queue if necessary
-        print("Tasks: {}\tImgs: {}".format(self.task_queue.qsize(), self.result_queue.qsize()))
+        # print("Tasks: {}\tImgs: {}".format(self.task_queue.qsize(), self.result_queue.qsize()))
         while self.task_queue.qsize() < 500:
             if self.random:
                 self.__add_tasks_from_random_offset(self.batch_size)
@@ -220,7 +227,6 @@ class ParallelSatPopBatch:
                            random=self.random)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        print("Inside the close")
         self.stop_event.set()
         for thread in self.threads:
             thread.join()
