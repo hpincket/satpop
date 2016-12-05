@@ -3,12 +3,11 @@ import tensorflow as tf
 
 import constants as C
 from batch import BucketLabelTransformer, ParallelSatPopBatch
-from metadata_utils import generate_even_divisions
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
-transformer = BucketLabelTransformer(generate_even_divisions(5))
+transformer = BucketLabelTransformer([1.0, 100000])
 batchsize = 20
 
 OPTIONS = transformer.number_of_labels()
