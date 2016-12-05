@@ -65,10 +65,10 @@ def main():
     # Densly connected layer
     # Our features are now all 64 filters at all locations, just picture this as
     # the original neural network from assign1.
-    # NEW_SIZE = 1024
-    NEW_SIZE = 128
-    W_fc1 = weight_variable([quarter_size * quarter_size * 64, NEW_SIZE])
-    b_fc1 = bias_variable([NEW_SIZE])
+    # hidden_size = 1024
+    hidden_size = 128
+    W_fc1 = weight_variable([quarter_size * quarter_size * 64, hidden_size])
+    b_fc1 = bias_variable([hidden_size])
     h_pool2_flat = tf.reshape(h_pool2, [-1, quarter_size * quarter_size * 64])
     h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
@@ -77,18 +77,18 @@ def main():
     h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
     # Readout
-    W_fc2 = weight_variable([NEW_SIZE, OPTIONS])
+    W_fc2 = weight_variable([hidden_size, OPTIONS])
     b_fc2 = bias_variable([OPTIONS])
-    y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
+    y_conv = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
-    normalized = tf.sigmoid(y_conv)
-    weighted = tf.reduce_sum(tf.mul(normalized, transformer.bucket_maxes))
-    weighted_error = tf.reduce_sum(tf.square(y_ - weighted))
-
-    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_conv, y_))
+    # normalized = tf.sigmoid(y_conv)
+    # weighted = tf.reduce_sum(tf.mul(normalized, transformer.bucket_maxes))
+    # weighted_error = tf.reduce_sum(tf.square(y_ - weighted))
+    # cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_conv, y_))
+    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_conv), reduction_indices=[1]))
     # train_step = tf.train.AdamOptimizer(1e-4).minimize(weighted_error)
     train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
-    correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
+    correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     sess.run(tf.global_variables_initializer())
 
@@ -110,18 +110,15 @@ def main():
         for i, batch in enumerate(spb):
             if i >= 80:
                 break
+            
             batching_img, batching_lab = batch
+            
             if i % 2 == 0:
-                train_accuracy, weighted_res, weighted_error_res, y_conv_res = sess.run(
-                    (accuracy, weighted, weighted_error, y_conv), feed_dict={
-                    x: batching_img,
-                    y_: batching_lab,
-                    keep_prob: 1.0
-                })
+                train_accuracy = accuracy.eval(feed_dict={x: batching_img, y_: batching_lab, keep_prob: 1.0})
+                
                 print(train_accuracy)
-            sess.run(train_step, feed_dict={x: batching_img,
-                                            y_: batching_lab,
-                                            keep_prob: 0.5})
+            
+            train_step.run(feed_dict={x: batching_img, y_: batching_lab, keep_prob: 0.5})
 
     print("TESTING")
 
@@ -131,9 +128,11 @@ def main():
 
     with ptest_spb as test_spb:
         for i, batch in enumerate(test_spb):
-            print("iteration {}".format(i))
             if i >= 20:
                 break
+            
+            print("iteration {}".format(i))
+            
             batching_img, batching_lab = batch
             new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img,
                                                                y_: batching_lab,
