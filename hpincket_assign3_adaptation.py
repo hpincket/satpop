@@ -1,14 +1,16 @@
 import numpy as np
 import tensorflow as tf
+from metadata_utils import generate_even_divisions
 
 import constants as C
 from batch import BucketLabelTransformer, ParallelSatPopBatch
-from metadata_utils import generate_even_divisions
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
-transformer = BucketLabelTransformer(generate_even_divisions(5))
+# transformer = BucketLabelTransformer(generate_even_divisions(5))
+
+transformer = BucketLabelTransformer([1.0, 100000])
 batchsize = 40
 
 OPTIONS = transformer.number_of_labels()
@@ -88,18 +90,21 @@ W_fc2 = weight_variable([NEW_SIZE, OPTIONS])
 b_fc2 = bias_variable([OPTIONS])
 y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
-normalized = tf.sigmoid(y_conv)
-weighted = tf.reduce_sum(tf.mul(normalized, transformer.bucket_maxes))
-weighted_error = tf.reduce_sum(tf.square(y_ - weighted))
+# y = tf.nn.sigmoid(y_conv)
+# weighted = tf.reduce_sum(tf.mul(normalized, transformer.bucket_maxes))
+# weighted_error = tf.reduce_sum(tf.square(y_ - weighted))
+# mse = tf.reduce_mean(tf.square(y - y_))
 
 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_conv, y_))
+# cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_conv), reduction_indices=[1]))
 # train_step = tf.train.AdamOptimizer(1e-4).minimize(weighted_error)
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 correct_prediction = tf.equal(tf.argmax(y_conv,1), tf.argmax(y_,1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 sess.run(tf.initialize_all_variables())
 
-print(weighted.get_shape())
+
+# print(weighted.get_shape())
 # for i in range(2000):
 # batch = mnist.train.next_batch(50)
 # if i%100 == 0:
@@ -121,34 +126,56 @@ def test(n):
             if i >= n:
                 break
             batching_img, batching_lab = batch
-            new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img,
+            new_batch_accuracy, guess = sess.run((accuracy, y_conv) , feed_dict={x: batching_img,
                                                                y_: batching_lab,
                                                                keep_prob: 1.0})
             all_test_accuracy.append(new_batch_accuracy)
     print(np.mean(all_test_accuracy))
 
-pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize,
-                           label_transformer=transformer, image_dimension=3)
-with pspb as spb:
-    for i, batch in enumerate(spb):
-        # if i % 10 == 0:
-        # test(10)
-        if i > 240:
-            break
-        batching_img, batching_lab = batch
-        if i % 2 == 0:
-            train_accuracy, weighted_res, weighted_error_res, y_conv_res = sess.run(
-                (accuracy, weighted, weighted_error, y_conv), feed_dict={
-                    x: batching_img,
-                    y_: batching_lab,
-                    keep_prob: 1.0
-                })
-            # print(weighted_res)
-            # print(weighted_error_res)
-            print(train_accuracy)
-        sess.run(train_step, feed_dict={x: batching_img,
-                                        y_: batching_lab,
-                                        keep_prob: 0.5})
+for i in range(2):
+	pspb = ParallelSatPopBatch(C.SATPOP_MAIN_DATA_FILE, C.SATPOP_IMAGE_FOLDER, batch_size=batchsize,
+				   label_transformer=transformer, image_dimension=3)
+	with pspb as spb:
+	    for i, batch in enumerate(spb):
+		# if i % 10 == 0:
+		# test(10)
+		if i > 480:
+		# if i > 40:
+		    break
+		batching_img, batching_lab = batch
+		if i % 2 == 0:
+		    train_accuracy, y_conv_res = sess.run(
+			(accuracy, y_conv), feed_dict={
+			    x: batching_img,
+			    y_: batching_lab,
+			    keep_prob: 1.0
+			})
+
+
+		    def normalize(v):
+			mmin = np.amin(v)
+			mmax = np.amax(v)
+			nv = []
+			for e in v:
+			    nv.append(e - mmin)
+			nnv = []
+			for e in nv:
+			    nnv.append(e / (mmax - mmin))
+			s = sum(nnv)
+			return [e / s for e in nnv]
+			# for yc, l in zip(list(normalize(y_conv_res)), list(batching_lab)):
+			# print(yc)
+			# print(l)
+			# print("--")
+
+
+		    # print(zip(list(y_conv_res), list(batching_lab)))
+		    # print(weighted_res)
+		    # print(weighted_error_res)
+		    print(train_accuracy)
+		sess.run(train_step, feed_dict={x: batching_img,
+						y_: batching_lab,
+						keep_prob: 0.5})
 
 print("Fin")
-test(10)
+test(80)
