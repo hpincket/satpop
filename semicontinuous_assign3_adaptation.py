@@ -20,8 +20,8 @@ def max_pool(pool_size, x):
     return tf.nn.max_pool(x, ksize=[1, pool_size, pool_size, 1], strides=[1, pool_size, pool_size, 1], padding='SAME')
 
 def main():
-    num_buckets = 3
-    transformer = BucketLabelTransformer(generate_even_divisions(num_buckets))
+    num_buckets = 2
+    transformer = BucketLabelTransformer([1.0, 1000000])
     batch_size = 10
 
     OPTIONS = transformer.number_of_labels()
@@ -121,6 +121,7 @@ def main():
             
             batching_img, batching_lab = batch
             new_batch_accuracy = sess.run(accuracy, feed_dict={x: batching_img, y_: batching_lab, keep_prob: 1.0})
+            print batching_lab
             all_test_accuracy.append(new_batch_accuracy)
 
     print("Done with testing")
