@@ -34,8 +34,12 @@ def generate_even_divisions(num_of_divisions):
 
 
 if __name__ == "__main__":
-    bins = [0, 10, 100, 1000, 10000, 100000]
-    generate_histogram(bins)
-    bins = generate_even_divisions(10)
-    print(bins)
-    generate_histogram(bins)
+    pops = __get_list_of_pops()
+    less = 0
+    more = 0
+    for pop in pops:
+        if pop < 1.0:
+            less += 1
+        else:
+            more += 1
+    print(less, more)

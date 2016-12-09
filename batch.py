@@ -13,16 +13,22 @@ from metadata_utils import generate_even_divisions
 
 
 class BucketLabelTransformer():
+    '''
+    Modifies populations to labels
+    bucket_maxes is a list of values which define the upper bound on the buckets.
+    '''
     def __init__(self, bucket_maxes):
         self.bucket_maxes = bucket_maxes
 
     def transform_label(self, pop):
+        ''' Given a population, determine which bucket it belongs to'''
         for i, max in enumerate(self.bucket_maxes):
             if pop < max:
                 return i
         return len(self.bucket_maxes)
 
     def number_of_labels(self):
+        ''' The number of label options'''
         return len(self.bucket_maxes)
 
 
@@ -33,6 +39,15 @@ class RecordLoadingThread(threading.Thread):
     '''
 
     def __init__(self, threadID, stop_event, image_dimension, image_dir, task_queue, result_queue):
+        '''
+        Create a new thread
+        :param threadID: a given number identifying this thread for debugging
+        :param stop_event: used to signal an exit from the while loop
+        :param image_dimension: 1 or 3. How the image should be processed
+        :param image_dir:
+        :param task_queue: where info from data.tsv is placed. This thread consumes.
+        :param result_queue: where images and labels are placed. This thread produces.
+        '''
         super(RecordLoadingThread, self).__init__()
         self.threadID = threadID
         self.task_queue = task_queue
@@ -42,12 +57,13 @@ class RecordLoadingThread(threading.Thread):
         self.stop_event = stop_event
 
     def run(self):
+        ''' Loop forever '''
         while not self.stop_event.is_set():
             # Continually complete tasks
             row_task = self.task_queue.get(block=True, timeout=5)
             try:
                 row_result = self.__process_row(row_task)
-                if row_result[0] is not None:
+                if row_result[0] is not None:  # Used for odd error case.
                     self.result_queue.put(row_result, block=True, timeout=10)
             except IOError as e:
                 pass
@@ -58,11 +74,13 @@ class RecordLoadingThread(threading.Thread):
 
 
     def __process_img(self, fname, dim):
+        ''' Open image, return it in the correct format '''
         with open(fname, "rb") as imgfd:
             r = png.Reader(file=imgfd)
             h, w, pixels, metadata = r.read()
             assert (h == w)
             if metadata['alpha']:
+                # Lord knows why this is necessary
                 ans = []
                 for lpixels in pixels:
                     ans.extend([v for i, v in enumerate(lpixels) if ((i + 1) % 4) != 0 or i == 0])
@@ -72,10 +90,7 @@ class RecordLoadingThread(threading.Thread):
                 try:
                     image_1d = np.reshape(image_2d, (h * h * 3))
                 except ValueError:
-                    # print(metadata)
-                    # print(pixels)
-                    # print(h)
-                    return None
+                    return None  # Will be ignored later.
             if dim == 1:
                 ret_image = image_1d
             elif dim == 3:
@@ -95,14 +110,11 @@ class SatPopBatch:
     The image/label iterator. Should be used inside a with ParallelSatPopBatcher
     '''
 
-    def __init__(self,
-                 data_fname,
-                 batch_size,
-                 task_queue,
-                 result_queue,
-                 label_transformer,
-                 random=False
-                 ):
+    def __init__(self, data_fname, batch_size, task_queue, result_queue, label_transformer, random=False):
+        '''
+        Create a new iterator.
+        Most of these items are passed on to worker threads.
+        '''
         self.data_fname = data_fname
         self.batch_size = batch_size
         self.task_queue = task_queue
@@ -112,10 +124,12 @@ class SatPopBatch:
         self.random = random
 
     def __add_tasks_from_random_offset(self, num):
+        ''' Used if random=True '''
         self.offset = random.randint(0, 40000)
         self.__add_tasks(self.batch_size)
 
     def __add_tasks(self, num):
+        ''' Seeks to offset, reads num files'''
         if not self.random and self.offset > 42000:
             raise StopIteration
         with open(self.data_fname, "r") as data:
@@ -130,7 +144,7 @@ class SatPopBatch:
 
     def __make_one_hot(self, dense_labels, max):
         one_hots = np.zeros((len(dense_labels), self.label_transformer.number_of_labels()))
-        
+	max = 21
         if max == 3:
             semicontinuous_distribution = [[0.75, 0.25, 0.0], # rural
                                            [0.25, 0.5, 0.25], # surburban
