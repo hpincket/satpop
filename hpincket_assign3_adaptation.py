@@ -46,7 +46,8 @@ h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
 # Size: h_conv1 is [batchsize, 28, 28, 32]
 # Size: h_conv1 is [batchsize, 512, 512, 32]
 h_pool1 = max_pool(2, h_conv1)
-
+print("hpool1")
+print(h_pool1.get_shape())
 # Size: h_pool1 is [batchsize, 14, 14, 32]
 # Size: h_pool1 is [batchsize, 256, 256, 32]
 # print(h_pool1.get_shape())
@@ -57,18 +58,23 @@ h_pool2 = max_pool(2, h_conv2)
 
 # print(h_pool2.get_shape())
 
+print("hpool2")
 print(h_pool1.get_shape())
 W_conv3 = weight_variable([3, 3, 64, 64])
 b_conv3 = bias_variable([64])
 h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
 h_pool3 = max_pool(2, h_conv3)
 
+print("hpool3")
 print(h_pool3.get_shape())
 
 W_conv4 = weight_variable([3, 3, 64, 64])
 b_conv4 = bias_variable([64])
 h_conv4 = tf.nn.relu(conv2d(h_pool3, W_conv4) + b_conv4)
 h_pool4 = max_pool(2, h_conv4)
+
+print("hpool4")
+print(h_pool4.get_shape())
 
 quarter_size = IMAGE_WIDTH / (2 * 2 * 2 * 2)
 # Densly connected layer
